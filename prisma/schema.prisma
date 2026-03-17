@@ -1,0 +1,199 @@
+// CareCircle - Prisma Schema
+// A comprehensive database schema for the caregiver support platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User - The caregiver using the platform
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String?
+  avatar        String?
+  phone         String?
+  role          String        @default("caregiver") // caregiver, professional, admin
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relationships
+  careRecipients    CareRecipient[]
+  appointments      Appointment[]
+  medications       Medication[]
+  symptoms          SymptomLog[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  chatMessages      ChatMessage[]
+  wellnessLogs      WellnessLog[]
+  tasks             Task[]
+}
+
+// CareRecipient - The person being cared for
+model CareRecipient {
+  id            String   @id @default(cuid())
+  name          String
+  dateOfBirth   DateTime?
+  conditions    String?  // JSON string of medical conditions
+  notes         String?
+  photo         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  caregiverId   String
+  caregiver     User     @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  medications   Medication[]
+  symptoms      SymptomLog[]
+  tasks         Task[]
+}
+
+// Appointment - Medical appointments and events
+model Appointment {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  date          DateTime
+  duration      Int       @default(30) // minutes
+  location      String?
+  doctorName    String?
+  type          String    @default("medical") // medical, therapy, other
+  status        String    @default("scheduled") // scheduled, completed, cancelled
+  reminder      Boolean   @default(true)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relationships
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String
+  recipient     CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+// Medication - Medication tracking
+model Medication {
+  id              String   @id @default(cuid())
+  name            String
+  dosage          String
+  frequency       String   // daily, twice-daily, weekly, etc.
+  times           String?  // JSON array of times
+  startDate       DateTime?
+  endDate         DateTime?
+  instructions    String?
+  prescribingDoc  String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId     String
+  recipient       CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+// SymptomLog - Track symptoms over time
+model SymptomLog {
+  id            String   @id @default(cuid())
+  date          DateTime @default(now())
+  symptoms      String   // JSON string of symptoms and severity
+  notes         String?
+  mood          Int?     // 1-5 scale
+  painLevel     Int?     // 0-10 scale
+  createdAt     DateTime @default(now())
+  
+  // Relationships
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String
+  recipient     CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+// CommunityPost - Posts in the community forum
+model CommunityPost {
+  id            String   @id @default(cuid())
+  title         String
+  content       String
+  category      String   @default("general") // general, alzheimer, cancer, disability, etc.
+  likes         Int      @default(0)
+  views         Int      @default(0)
+  isAnonymous   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments      CommunityComment[]
+}
+
+// CommunityComment - Comments on community posts
+model CommunityComment {
+  id            String   @id @default(cuid())
+  content       String
+  isAnonymous   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  postId        String
+  post          CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// ChatMessage - AI assistant chat history
+model ChatMessage {
+  id            String   @id @default(cuid())
+  role          String   // user, assistant
+  content       String
+  createdAt     DateTime @default(now())
+  
+  // Relationships
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// WellnessLog - Track caregiver wellness
+model WellnessLog {
+  id                String   @id @default(cuid())
+  date              DateTime @default(now())
+  stressLevel       Int?     // 1-10 scale
+  sleepHours        Float?
+  sleepQuality      Int?     // 1-5 scale
+  mood              Int?     // 1-5 scale
+  physicalActivity  Boolean  @default(false)
+  selfCareTime      Int?     // minutes
+  notes             String?
+  burnoutRisk       Int?     // 0-100 calculated score
+  createdAt         DateTime @default(now())
+  
+  // Relationships
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Task - Daily tasks and to-dos
+model Task {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  dueDate       DateTime?
+  completed     Boolean  @default(false)
+  priority      String   @default("medium") // low, medium, high
+  category      String   @default("care") // care, personal, medical, other
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String?
+  recipient     CareRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+}
