@@ -1,125 +1,125 @@
-# CareCircle - Plateforme de Soutien Intelligent pour Aidants Familiaux
+# CareCircle - Plateforme d'Aide aux Aidants Familiaux
 
 <p align="center">
-  <img src="download/carecircle_logo.png" alt="CareCircle Logo" width="200" />
+  <img src="https://img.shields.io/badge/Next.js-16-black" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-5-blue" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind-4-38bdf8" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
-
-<p align="center">
-  <strong>Le compagnon digital des aidants familiaux</strong>
-</p>
-
-<p align="center">
-  Assistant IA personnalisé • Coordination des soins • Communauté bienveillante • Ressources adaptées
-</p>
-
----
 
 ## 🌟 À propos
 
-CareCircle est une application web moderne conçue pour accompagner les **11 millions d'aidants familiaux** en France et les **350+ millions** dans le monde. Notre mission : faciliter le quotidien de ceux qui accompagnent un proche malade, âgé ou en situation de handicap.
+CareCircle est une plateforme de soutien intelligent pour les aidants familiaux, offrant :
+- **Assistant IA Cleo** : Compagnon disponible 24h/24
+- **Coordination des soins** : Calendrier, médicaments, rendez-vous
+- **Suivi du bien-être** : Stress, sommeil, humeur
+- **Communauté** : Échange entre aidants
+- **Ressources** : Guides et formations
 
-## ✨ Fonctionnalités
+## 🚀 Déploiement sur Vercel
 
-### 🤖 Assistant IA Cleo
-- Chat interactif disponible 24h/24
-- Conseils personnalisés basés sur votre situation
-- Détection des signes d'épuisement
+### Variables d'environnement requises
 
-### 📅 Coordination des Soins
-- Calendrier médical partagé
-- Suivi des médicaments avec rappels
-- Journal des symptômes
-- Historique médical exportable
+| Variable | Description | Obligatoire |
+|----------|-------------|--------------|
+| `DATABASE_URL` | URL de connexion PostgreSQL (Neon) | ✅ |
+| `DIRECT_DATABASE_URL` | URL directe PostgreSQL (Neon) | ✅ |
+| `NEXTAUTH_SECRET` | Secret pour les sessions | ✅ |
+| `NEXTAUTH_URL` | URL de votre app Vercel | ✅ |
 
-### 👥 Communauté d'Entraide
-- Groupes thématiques (Alzheimer, Cancer, Handicap...)
-- Forum de discussion
-- Système de mentorat entre aidants
+### Configuration de la base de données
 
-### 📚 Ressources Éducatives
-- Guides pratiques par pathologie
-- Webinaires avec professionnels
-- Formations certifiantes
+1. Créez un compte sur [Neon](https://neon.tech)
+2. Créez un nouveau projet
+3. Copiez les URLs de connexion :
+   - `DATABASE_URL` (avec pooling)
+   - `DIRECT_DATABASE_URL` (sans pooling, pour migrations)
 
-### 🧘 Bien-être de l'Aidant
-- Score de bien-être personnalisé
-- Suivi du stress et du sommeil
-- Activités suggérées
-- Prévention du burnout
+### Déploiement
 
-## 🚀 Démarrage Rapide
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Maxlechampion/carecircle)
 
-### Prérequis
-- Node.js 18+ ou Bun
-- npm, yarn ou bun
-
-### Installation
+## 🛠️ Développement local
 
 ```bash
 # Cloner le repository
-git clone https://github.com/votre-username/carecircle.git
+git clone https://github.com/Maxlechampion/carecircle.git
 cd carecircle
 
 # Installer les dépendances
 bun install
 
-# Lancer en développement
+# Configurer l'environnement
+cp .env.example .env.local
+
+# Lancer le serveur de développement
 bun run dev
 ```
 
-L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
-
-## 🏗️ Stack Technique
-
-- **Framework** : Next.js 16 (App Router)
-- **Langage** : TypeScript 5
-- **Styling** : Tailwind CSS 4 + shadcn/ui
-- **Animations** : Framer Motion
-- **Base de données** : Prisma + SQLite
-- **État** : Zustand + localStorage
-
-## 📁 Structure du Projet
+## 📁 Structure du projet
 
 ```
 carecircle/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx          # Application principale
-│   │   ├── layout.tsx        # Layout racine
-│   │   └── globals.css       # Styles globaux
+│   │   ├── api/
+│   │   │   ├── chat/route.ts        # API Assistant IA
+│   │   │   └── payments/            # API Paiements
+│   │   └── page.tsx                 # Application principale
 │   ├── components/
-│   │   └── ui/               # Composants shadcn/ui
-│   ├── hooks/                # Hooks personnalisés
-│   └── lib/                  # Utilitaires
+│   │   ├── ui/                      # Composants shadcn/ui
+│   │   ├── auth-page.tsx            # Authentification
+│   │   ├── testimonials-page.tsx    # Témoignages
+│   │   └── pricing-page.tsx         # Tarification
+│   └── lib/
+│       ├── payment-config.ts        # Configuration paiements
+│       └── stripe.ts                 # Intégration Stripe
 ├── prisma/
-│   └── schema.prisma         # Schéma base de données
-├── public/                   # Assets statiques
-└── download/                 # Documents générés
+│   └── schema.prisma                # Schéma base de données
+└── public/
 ```
 
-## 🌐 Déploiement
+## 💳 Paiements
 
-### Vercel (Recommandé)
+CareCircle supporte les paiements dans 30+ pays :
 
-1. Créer un compte sur [vercel.com](https://vercel.com)
-2. Connecter votre repository GitHub
-3. Cliquer sur "Deploy"
+### Europe
+- Carte bancaire, Apple Pay, Google Pay (via Stripe)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+### Afrique
+- **Mobile Money** : Orange Money, MTN, Wave, M-Pesa, Airtel, Moov
+- Carte bancaire (via Flutterwave)
 
-### Variables d'environnement
+## 🌍 Pays supportés
+
+| Région | Pays |
+|--------|------|
+| Afrique de l'Ouest | Sénégal, Côte d'Ivoire, Mali, Burkina Faso, Bénin, Nigeria, Ghana |
+| Afrique de l'Est | Kenya, Ouganda, Rwanda, Tanzanie |
+| Afrique Centrale | Cameroun, RD Congo |
+| Europe | France, Belgique, Suisse, Luxembourg |
+| International | États-Unis, Canada |
+
+## 📝 Variables d'environnement optionnelles
 
 ```env
-DATABASE_URL="file:./db/carecircle.db"
+# Stripe (Europe/International)
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Flutterwave (Afrique)
+FLUTTERWAVE_PUBLIC_KEY=FLWPUBK_live_xxx
+FLUTTERWAVE_SECRET_KEY=FLWSECK_live_xxx
+
+# OAuth
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
 ```
 
-## 🤝 Contribution
+## 📄 License
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou soumettre une pull request.
-
-## 📄 Licence
-
-Ce projet est sous licence MIT.
+MIT License - voir [LICENSE](LICENSE)
 
 ---
 
