@@ -64,6 +64,27 @@ const FALLBACK_RESPONSES = [
   "Je comprends que cela puisse être difficile. La communauté CareCircle est là pour vous soutenir. N'hésitez pas à consulter les discussions dans l'onglet Communauté pour trouver des conseils d'autres aidants.",
 ]
 
+// Intelligent response based on keywords
+function getIntelligentResponse(userContent: string): string {
+  let response = FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)]
+  
+  if (userContent.includes('médicament') || userContent.includes('medicament')) {
+    response = "Pour les questions sur les médicaments, je vous recommande de consulter l'onglet Soins où vous pouvez gérer le suivi des médicaments. Pour des conseils médicaux spécifiques, n'hésitez pas à consulter votre médecin ou pharmacien. Y a-t-il autre chose que je puisse vous aider ?"
+  } else if (userContent.includes('stress') || userContent.includes('fatigue') || userContent.includes('épuisé') || userContent.includes('epuise')) {
+    response = "Je comprends que vous vous sentiez épuisé(e). Le bien-être des aidants est essentiel. Je vous invite à consulter la section Bien-être pour des exercices de relaxation et le suivi de votre état. N'oubliez pas : prendre soin de vous n'est pas un luxe, c'est une nécessité."
+  } else if (userContent.includes('rendez-vous') || userContent.includes('médecin') || userContent.includes('medecin')) {
+    response = "Pour gérer vos rendez-vous médicaux, rendez-vous dans l'onglet Soins. Vous y trouverez un calendrier pour organiser toutes vos consultations. Pensez à activer les rappels pour ne rien oublier !"
+  } else if (userContent.includes('seul') || userContent.includes('solitude')) {
+    response = "Vous n'êtes pas seul(e). La communauté CareCircle est là pour vous soutenir. Je vous invite à rejoindre les discussions dans l'onglet Communauté pour échanger avec d'autres aidants qui comprennent votre situation."
+  } else if (userContent.includes('bonjour') || userContent.includes('salut') || userContent.includes('hello')) {
+    response = "Bonjour ! 👋 Je suis Cleo, votre assistant CareCircle. Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me poser vos questions sur l'aidance, les soins, ou votre bien-être."
+  } else if (userContent.includes('merci') || userContent.includes('thanks')) {
+    response = "Je vous en prie ! C'est un plaisir de vous accompagner. N'hésitez pas si vous avez d'autres questions. Prenez soin de vous ! 💙"
+  }
+  
+  return response
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -85,7 +106,7 @@ export async function POST(request: NextRequest) {
           error: 'Limite de messages atteinte', 
           remaining: 0
         },
-        { status: 200 } // Return 200 so the chat still works
+        { status: 200 }
       )
     }
 
@@ -100,13 +121,12 @@ export async function POST(request: NextRequest) {
 
     // Try to use z-ai-web-dev-sdk
     try {
-      // Dynamic import to handle potential module issues
       const ZAI = (await import('z-ai-web-dev-sdk')).default
       
       if (ZAI && typeof ZAI.create === 'function') {
         const zai = await ZAI.create()
         
-        if (zai && zai.chat && zai.chat.completions) {
+        if (zai && zai.chat && zai.chat.completions && typeof zai.chat.completions.create === 'function') {
           const completion = await zai.chat.completions.create({
             messages: chatMessages,
             temperature: 0.7,
@@ -123,25 +143,14 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (aiError) {
-      console.log('AI SDK not available, using fallback:', aiError instanceof Error ? aiError.message : 'Unknown error')
+      console.log('AI SDK not available, using intelligent fallback:', aiError instanceof Error ? aiError.message : 'Unknown error')
     }
 
     // Fallback: Use intelligent response based on user's message
     const lastUserMessage = messages.filter((m: { role: string }) => m.role === 'user').pop()
     const userContent = lastUserMessage?.content?.toLowerCase() || ''
     
-    let response = FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)]
-    
-    // Customize response based on keywords
-    if (userContent.includes('médicament') || userContent.includes('médicament')) {
-      response = "Pour les questions sur les médicaments, je vous recommande de consulter l'onglet Soins où vous pouvez gérer le suivi des médicaments. Pour des conseils médicaux spécifiques, n'hésitez pas à consulter votre médecin ou pharmacien. Y a-t-il autre chose que je puisse vous aider ?";
-    } else if (userContent.includes('stress') || userContent.includes('fatigue') || userContent.includes('épuisé')) {
-      response = "Je comprends que vous vous sentiez épuisé(e). Le bien-être des aidants est essentiel. Je vous invite à consulter la section Bien-être pour des exercices de relaxation et le suivi de votre état. N'oubliez pas : prendre soin de vous n'est pas un luxe, c'est une nécessité.";
-    } else if (userContent.includes('rendez-vous') || userContent.includes('médecin')) {
-      response = "Pour gérer vos rendez-vous médicaux, rendez-vous dans l'onglet Soins. Vous y trouverez un calendrier pour organiser toutes vos consultations. Pensez à activer les rappels pour ne rien oublier !";
-    } else if (userContent.includes('seul') || userContent.includes('solitude')) {
-      response = "Vous n'êtes pas seul(e). La communauté CareCircle est là pour vous soutenir. Je vous invite à rejoindre les discussions dans l'onglet Communauté pour échanger avec d'autres aidants qui comprennent votre situation.";
-    }
+    const response = getIntelligentResponse(userContent)
 
     return NextResponse.json({
       message: response,

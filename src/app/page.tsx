@@ -1929,6 +1929,44 @@ function CareCircleAppContent() {
         onAction={handleCommandAction}
       />
 
+      {/* Add Dialogs */}
+      <AddAppointmentDialog 
+        open={showAddDialog === 'appointment'} 
+        onOpenChange={(open) => setShowAddDialog(open ? 'appointment' : null)}
+        onAdd={(apt) => {
+          setAppointments(prev => [...prev, apt])
+          toast({ title: 'Rendez-vous ajouté' })
+        }}
+      />
+      
+      <AddMedicationDialog 
+        open={showAddDialog === 'medication'} 
+        onOpenChange={(open) => setShowAddDialog(open ? 'medication' : null)}
+        onAdd={(med) => {
+          setMedications(prev => [...prev, med])
+          toast({ title: 'Médicament ajouté' })
+        }}
+      />
+      
+      <AddTaskDialog 
+        open={showAddDialog === 'task'} 
+        onOpenChange={(open) => setShowAddDialog(open ? 'task' : null)}
+        onAdd={(task) => {
+          setTasks(prev => [...prev, task])
+          toast({ title: 'Tâche ajoutée' })
+        }}
+      />
+      
+      <AddPostDialog 
+        open={showAddDialog === 'post'} 
+        onOpenChange={(open) => setShowAddDialog(open ? 'post' : null)}
+        onAdd={(post) => {
+          setPosts(prev => [post, ...prev])
+          toast({ title: 'Discussion publiée' })
+        }}
+        userName={user.name}
+      />
+
       {/* Main App */}
       <AnimatePresence mode="wait">
         {currentView === 'landing' ? (
@@ -2040,6 +2078,342 @@ function SymptomForm({ onSubmit }: { onSubmit: (entry: SymptomEntry) => void }) 
         Enregistrer
       </Button>
     </div>
+  )
+}
+
+// ============================================
+// ADD DIALOG COMPONENTS
+// ============================================
+
+function AddAppointmentDialog({ open, onOpenChange, onAdd }: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onAdd: (apt: AppointmentData) => void;
+}) {
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [location, setLocation] = useState('')
+  const [doctorName, setDoctorName] = useState('')
+  const [type, setType] = useState<'medical' | 'therapy'>('medical')
+  const [notes, setNotes] = useState('')
+
+  const handleSubmit = () => {
+    if (!title || !date || !time) return
+    
+    const dateTime = new Date(`${date}T${time}`)
+    const apt: AppointmentData = {
+      id: generateId(),
+      title,
+      date: dateTime,
+      duration: 30,
+      location,
+      doctorName,
+      type,
+      notes
+    }
+    
+    onAdd(apt)
+    onOpenChange(false)
+    setTitle('')
+    setDate('')
+    setTime('')
+    setLocation('')
+    setDoctorName('')
+    setNotes('')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-teal-600" />
+            Nouveau rendez-vous
+          </DialogTitle>
+          <DialogDescription>Ajoutez un rendez-vous médical à votre calendrier</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="apt-title">Titre</Label>
+            <Input id="apt-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Consultation Dr. Martin" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="apt-date">Date</Label>
+              <Input id="apt-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apt-time">Heure</Label>
+              <Input id="apt-time" type="time" value={time} onChange={e => setTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="apt-location">Lieu</Label>
+            <Input id="apt-location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Cabinet médical" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="apt-doctor">Médecin</Label>
+            <Input id="apt-doctor" value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="Dr. Martin" />
+          </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="flex gap-2">
+              <Button variant={type === 'medical' ? 'default' : 'outline'} size="sm" onClick={() => setType('medical')} className={type === 'medical' ? 'bg-teal-600' : ''}>Médical</Button>
+              <Button variant={type === 'therapy' ? 'default' : 'outline'} size="sm" onClick={() => setType('therapy')} className={type === 'therapy' ? 'bg-teal-600' : ''}>Thérapie</Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="apt-notes">Notes</Label>
+            <Textarea id="apt-notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes importantes..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSubmit}>Ajouter</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddMedicationDialog({ open, onOpenChange, onAdd }: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onAdd: (med: MedicationData) => void;
+}) {
+  const [name, setName] = useState('')
+  const [dosage, setDosage] = useState('')
+  const [frequency, setFrequency] = useState('Une fois par jour')
+  const [times, setTimes] = useState<string[]>(['08:00'])
+  const [instructions, setInstructions] = useState('')
+
+  const handleAddTime = () => setTimes(prev => [...prev, '12:00'])
+  const handleRemoveTime = (index: number) => setTimes(prev => prev.filter((_, i) => i !== index))
+  const handleTimeChange = (index: number, value: string) => setTimes(prev => prev.map((t, i) => i === index ? value : t))
+
+  const handleSubmit = () => {
+    if (!name || !dosage) return
+    
+    const med: MedicationData = {
+      id: generateId(),
+      name,
+      dosage,
+      frequency,
+      times,
+      instructions,
+      takenToday: times.reduce((acc, t) => ({ ...acc, [t]: false }), {})
+    }
+    
+    onAdd(med)
+    onOpenChange(false)
+    setName('')
+    setDosage('')
+    setTimes(['08:00'])
+    setInstructions('')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pill className="w-5 h-5 text-teal-600" />
+            Ajouter un médicament
+          </DialogTitle>
+          <DialogDescription>Ajoutez un médicament au suivi quotidien</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="med-name">Nom du médicament</Label>
+            <Input id="med-name" value={name} onChange={e => setName(e.target.value)} placeholder="Doliprane" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="med-dosage">Dosage</Label>
+              <Input id="med-dosage" value={dosage} onChange={e => setDosage(e.target.value)} placeholder="500mg" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="med-freq">Fréquence</Label>
+              <select id="med-freq" value={frequency} onChange={e => setFrequency(e.target.value)} className="w-full h-10 px-3 border rounded-lg text-sm">
+                <option>Une fois par jour</option>
+                <option>Deux fois par jour</option>
+                <option>Trois fois par jour</option>
+                <option>Quotidien</option>
+                <option>Selon besoin</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Heures de prise</Label>
+              <Button variant="ghost" size="sm" onClick={handleAddTime} className="text-teal-600">
+                <Plus className="w-4 h-4 mr-1" /> Ajouter
+              </Button>
+            </div>
+            {times.map((time, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input type="time" value={time} onChange={e => handleTimeChange(i, e.target.value)} className="flex-1" />
+                {times.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveTime(i)} className="text-red-500">
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="med-instructions">Instructions</Label>
+            <Textarea id="med-instructions" value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="À prendre au repas..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSubmit}>Ajouter</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddTaskDialog({ open, onOpenChange, onAdd }: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onAdd: (task: TaskData) => void;
+}) {
+  const [title, setTitle] = useState('')
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
+
+  const handleSubmit = () => {
+    if (!title) return
+    
+    const task: TaskData = {
+      id: generateId(),
+      title,
+      completed: false,
+      priority
+    }
+    
+    onAdd(task)
+    onOpenChange(false)
+    setTitle('')
+    setPriority('medium')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-teal-600" />
+            Nouvelle tâche
+          </DialogTitle>
+          <DialogDescription>Ajoutez une tâche à votre liste</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="task-title">Titre</Label>
+            <Input id="task-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Appeler l'infirmière" />
+          </div>
+          <div className="space-y-2">
+            <Label>Priorité</Label>
+            <div className="flex gap-2">
+              {[
+                { value: 'low', label: 'Basse', color: 'bg-slate-100 text-slate-600' },
+                { value: 'medium', label: 'Moyenne', color: 'bg-blue-100 text-blue-600' },
+                { value: 'high', label: 'Haute', color: 'bg-amber-100 text-amber-600' },
+                { value: 'urgent', label: 'Urgente', color: 'bg-red-100 text-red-600' },
+              ].map(p => (
+                <Button key={p.value} variant={priority === p.value ? 'default' : 'outline'} size="sm" onClick={() => setPriority(p.value as typeof priority)} className={priority === p.value ? 'bg-teal-600' : ''}>
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSubmit}>Ajouter</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddPostDialog({ open, onOpenChange, onAdd, userName }: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onAdd: (post: PostData) => void;
+  userName: string;
+}) {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [category, setCategory] = useState('general')
+
+  const handleSubmit = () => {
+    if (!title || !content) return
+    
+    const post: PostData = {
+      id: generateId(),
+      title,
+      content,
+      author: { name: userName },
+      category,
+      likes: 0,
+      comments: 0,
+      isLiked: false,
+      createdAt: new Date()
+    }
+    
+    onAdd(post)
+    onOpenChange(false)
+    setTitle('')
+    setContent('')
+    setCategory('general')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-teal-600" />
+            Nouvelle discussion
+          </DialogTitle>
+          <DialogDescription>Partagez avec la communauté</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="post-title">Titre</Label>
+            <Input id="post-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Comment gérez-vous les troubles du sommeil ?" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="post-content">Contenu</Label>
+            <Textarea id="post-content" value={content} onChange={e => setContent(e.target.value)} placeholder="Partagez votre expérience..." rows={4} />
+          </div>
+          <div className="space-y-2">
+            <Label>Catégorie</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'general', label: 'Général' },
+                { value: 'alzheimer', label: 'Alzheimer' },
+                { value: 'temoignage', label: 'Témoignage' },
+                { value: 'ressources', label: 'Ressources' },
+                { value: 'question', label: 'Question' },
+              ].map(c => (
+                <Badge key={c.value} variant={category === c.value ? 'default' : 'outline'} className={cn('cursor-pointer', category === c.value && 'bg-teal-600')} onClick={() => setCategory(c.value)}>
+                  {c.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSubmit}>Publier</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
