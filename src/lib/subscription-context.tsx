@@ -41,39 +41,43 @@ const DEFAULT_SUBSCRIPTION: SubscriptionData = {
   cancelAtPeriodEnd: false,
 }
 
-// Helper to get initial state from localStorage
-function getInitialState(): SubscriptionData {
-  if (typeof window === 'undefined') return DEFAULT_SUBSCRIPTION
-  
-  try {
-    const stored = localStorage.getItem('carecircle_subscription')
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    console.error('Failed to load subscription from localStorage')
-  }
-  
-  return DEFAULT_SUBSCRIPTION
-}
-
 // Provider
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const initialState = getInitialState()
-  
-  const [plan, setPlan] = useState<PlanId>(initialState.plan)
-  const [status, setStatus] = useState<SubscriptionStatus | null>(initialState.status)
-  const [customerId, setCustomerId] = useState<string | null>(initialState.customerId)
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(initialState.subscriptionId)
-  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(
-    initialState.currentPeriodEnd ? new Date(initialState.currentPeriodEnd) : null
-  )
-  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(initialState.cancelAtPeriodEnd)
+  const [mounted, setMounted] = useState(false)
+  const [plan, setPlan] = useState<PlanId>('free')
+  const [status, setStatus] = useState<SubscriptionStatus | null>(null)
+  const [customerId, setCustomerId] = useState<string | null>(null)
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null)
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null)
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Load from localStorage only on client side after mount
+  useEffect(() => {
+    setMounted(true)
+    try {
+      const stored = localStorage.getItem('carecircle_subscription')
+      if (stored) {
+        const data: SubscriptionData = JSON.parse(stored)
+        setPlan(data.plan)
+        setStatus(data.status)
+        setCustomerId(data.customerId)
+        setSubscriptionId(data.subscriptionId)
+        if (data.currentPeriodEnd) {
+          setCurrentPeriodEnd(new Date(data.currentPeriodEnd))
+        }
+        setCancelAtPeriodEnd(data.cancelAtPeriodEnd)
+      }
+    } catch {
+      console.error('Failed to load subscription from localStorage')
+    }
+  }, [])
 
   // Save to localStorage
   const saveSubscription = useCallback((data: Partial<SubscriptionData>) => {
-    const newData = {
+    if (typeof window === 'undefined') return
+    
+    const newData: SubscriptionData = {
       plan: data.plan ?? plan,
       status: data.status ?? status,
       customerId: data.customerId ?? customerId,
@@ -171,7 +175,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 export function useSubscription() {
   const context = useContext(SubscriptionContext)
   if (!context) {
-    throw new Error('useSubscription must be used within SubscriptionProvider')
+    throw new Error('useSubscription needs to be used within SubscriptionProvider')
   }
   return context
 }

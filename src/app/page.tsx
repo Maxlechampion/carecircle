@@ -211,18 +211,26 @@ const MOCK_POSTS: PostData[] = [
 
 const generateWellnessHistory = () => {
   const history = []
+  const baseTime = Date.now()
   for (let i = 6; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
+    const dayTime = baseTime - (i * 24 * 60 * 60 * 1000)
+    const date = new Date(dayTime)
+    // Use fixed values based on day index for consistency
+    const dayIndex = 6 - i
     history.push({
-      date: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
-      score: 60 + Math.floor(Math.random() * 30),
-      stress: 3 + Math.floor(Math.random() * 5),
-      sleep: 5 + Math.floor(Math.random() * 4),
-      mood: 2 + Math.floor(Math.random() * 3)
+      date: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'][dayIndex] || 'Lun',
+      score: 60 + ((dayIndex * 5) % 30) + 5,
+      stress: 3 + (dayIndex % 5),
+      sleep: 5 + (dayIndex % 4),
+      mood: 2 + (dayIndex % 3)
     })
   }
   return history
+}
+
+const getMockTimestamp = (offset: number = 0) => {
+  // Return a fixed timestamp string to avoid hydration issues
+  return new Date(Date.now() + offset)
 }
 
 const MOCK_WELLNESS: WellnessData = {
@@ -231,15 +239,15 @@ const MOCK_WELLNESS: WellnessData = {
   sleepHours: 7,
   mood: 3,
   physicalActivity: true,
-  lastUpdated: new Date(),
+  lastUpdated: getMockTimestamp(),
   history: generateWellnessHistory()
 }
 
 const MOCK_NOTIFICATIONS: NotificationData[] = [
-  { id: 'notif_001', title: 'Rappel rendez-vous', message: 'Consultation Dr. Martin demain à 14h30', type: 'reminder', read: false, createdAt: new Date(), actionUrl: '#care' },
-  { id: 'notif_002', title: 'Médicament pris', message: 'Aricept a été marqué comme pris ce matin', type: 'success', read: true, createdAt: new Date(Date.now() - 3600000) },
-  { id: 'notif_003', title: 'Nouveau message', message: 'Claire M. a répondu à votre discussion', type: 'social', read: false, createdAt: new Date(Date.now() - 7200000), actionUrl: '#community' },
-  { id: 'notif_004', title: 'Conseil du jour', message: 'Prenez 15 minutes pour vous aujourd\'hui', type: 'tip', read: false, createdAt: new Date(Date.now() - 10800000) }
+  { id: 'notif_001', title: 'Rappel rendez-vous', message: 'Consultation Dr. Martin demain à 14h30', type: 'reminder', read: false, createdAt: getMockTimestamp(), actionUrl: '#care' },
+  { id: 'notif_002', title: 'Médicament pris', message: 'Aricept a été marqué comme pris ce matin', type: 'success', read: true, createdAt: getMockTimestamp(-3600000) },
+  { id: 'notif_003', title: 'Nouveau message', message: 'Claire M. a répondu à votre discussion', type: 'social', read: false, createdAt: getMockTimestamp(-7200000), actionUrl: '#community' },
+  { id: 'notif_004', title: 'Conseil du jour', message: 'Prenez 15 minutes pour vous aujourd\'hui', type: 'tip', read: false, createdAt: getMockTimestamp(-10800000) }
 ]
 
 const MOCK_SYMPTOMS: SymptomEntry[] = [

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { 
   Check, X, Sparkles, Zap, Crown, Heart, 
   HelpCircle, ChevronDown, Shield, Clock
@@ -28,7 +28,13 @@ interface PricingPageProps {
 export function PricingPage({ onSelectPlan, showAnnualToggle = true, compact = false }: PricingPageProps) {
   const [isAnnual, setIsAnnual] = useState(true)
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
+  const [mounted, setMounted] = useState(false)
   const { plan: currentPlan, selectPlan, isActive } = useSubscription()
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSelectPlan = async (planId: PlanId) => {
     setLoadingPlan(planId)
@@ -46,11 +52,42 @@ export function PricingPage({ onSelectPlan, showAnnualToggle = true, compact = f
   }
 
   const getAnnualPrice = (monthlyPrice: number) => {
-    return monthlyPrice * 12 * 0.8 // 20% discount
+    return monthlyPrice * 12 * 0.8
   }
 
   const getAnnualSavings = (monthlyPrice: number) => {
     return monthlyPrice * 12 - getAnnualPrice(monthlyPrice)
+  }
+
+  // Don't render dynamic content until mounted
+  if (!mounted) {
+    return (
+      <div className="w-full">
+        <div className="text-center mb-8">
+          <Badge className="mb-4 bg-teal-100 text-teal-700">
+            <Sparkles className="w-3 h-3 mr-1" />
+            Tarifs transparents
+          </Badge>
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">
+            Choisissez le plan adapté à vos besoins
+          </h2>
+          <p className="text-slate-600 max-w-2xl mx-auto">
+            Tous les plans incluent un essai gratuit de 14 jours. Annulez à tout moment.
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="border-slate-200 animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-6 bg-slate-200 rounded mb-4 w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded mb-2 w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -94,7 +131,7 @@ export function PricingPage({ onSelectPlan, showAnnualToggle = true, compact = f
         'grid gap-6',
         compact ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-3'
       )}>
-        {Object.entries(PRICING_PLANS).map(([planId, plan], index) => {
+        {Object.entries(PRICING_PLANS).map(([planId, plan]) => {
           const isCurrentPlan = currentPlan === planId
           const isLoading = loadingPlan === planId
           const price = isAnnual && plan.price > 0 
@@ -107,7 +144,7 @@ export function PricingPage({ onSelectPlan, showAnnualToggle = true, compact = f
               key={planId}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ duration: 0.3 }}
             >
               <Card 
                 className={cn(
@@ -145,7 +182,7 @@ export function PricingPage({ onSelectPlan, showAnnualToggle = true, compact = f
                     planId === 'premium' && 'bg-teal-100',
                     planId === 'family' && 'bg-purple-100'
                   )}>
-                    {planId === 'free' && <Heart className={cn('w-6 h-6 text-slate-600')} />}
+                    {planId === 'free' && <Heart className="w-6 h-6 text-slate-600" />}
                     {planId === 'premium' && <Zap className="w-6 h-6 text-teal-600" />}
                     {planId === 'family' && <Crown className="w-6 h-6 text-purple-600" />}
                   </div>
