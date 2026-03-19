@@ -1,0 +1,566 @@
+// CareCircle - Prisma Schema v2.0
+// Complete database schema with authentication, testimonials, and payments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  avatar          String?
+  phone           String?   @unique
+  password        String?   // Hashed password
+  
+  // Verification
+  emailVerified   DateTime?
+  phoneVerified   DateTime?
+  
+  // Profile
+  role            String    @default("caregiver") // caregiver, professional, admin
+  country         String?   // ISO country code (FR, SN, CI, NG...)
+  currency        String    @default("EUR")
+  language        String    @default("fr")
+  timezone        String?
+  
+  // Security
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+  twoFactorBackup  String?  // JSON array of backup codes
+  
+  // Subscription
+  subscriptionPlan  String  @default("free") // free, premium, family
+  subscriptionStatus String? // active, canceled, past_due, trialing
+  stripeCustomerId  String? @unique
+  stripeSubscriptionId String?
+  subscriptionPeriodEnd DateTime?
+  
+  // OAuth
+  authProvider    String    @default("credentials") // credentials, google, facebook, apple, phone
+  oauthId         String?   // Provider-specific ID
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  
+  // Relations
+  careRecipients      CareRecipient[]
+  appointments        Appointment[]
+  medications         Medication[]
+  symptoms            SymptomLog[]
+  communityPosts      CommunityPost[]
+  communityComments   CommunityComment[]
+  chatMessages        ChatMessage[]
+  wellnessLogs        WellnessLog[]
+  tasks               Task[]
+  notifications       Notification[]
+  testimonials        Testimonial[]
+  payments            Payment[]
+  sessions            UserSession[]
+  otpCodes            OTPCode[]
+  postLikes           PostLike[]
+  
+  @@index([email])
+  @@index([phone])
+  @@index([country])
+}
+
+// User Session for multi-device management
+model UserSession {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  token         String    @unique
+  refreshToken  String?   @unique
+  
+  // Device info
+  deviceName    String?
+  deviceType    String?   // mobile, tablet, desktop
+  browser       String?
+  os            String?
+  ipAddress     String?
+  userAgent     String?
+  
+  // Location (for security)
+  country       String?
+  city          String?
+  
+  // Status
+  isActive      Boolean   @default(true)
+  lastActive    DateTime  @default(now())
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// OTP Codes for phone verification
+model OTPCode {
+  id            String    @id @default(cuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  phone         String
+  code          String
+  type          String    // verification, login, password_reset, 2fa
+  
+  attempts      Int       @default(0)
+  verified      Boolean   @default(false)
+  
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  
+  @@index([phone])
+  @@index([code])
+}
+
+// ============================================
+// CARE RECIPIENT
+// ============================================
+
+model CareRecipient {
+  id            String    @id @default(cuid())
+  name          String
+  dateOfBirth   DateTime?
+  conditions    String?   // JSON string of medical conditions
+  notes         String?
+  photo         String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  caregiverId   String
+  caregiver     User      @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  medications   Medication[]
+  symptoms      SymptomLog[]
+  tasks         Task[]
+  
+  @@index([caregiverId])
+}
+
+// ============================================
+// MEDICAL & CARE TRACKING
+// ============================================
+
+model Appointment {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  date          DateTime
+  duration      Int       @default(30) // minutes
+  location      String?
+  doctorName    String?
+  type          String    @default("medical") // medical, therapy, other
+  status        String    @default("scheduled") // scheduled, completed, cancelled
+  reminder      Boolean   @default(true)
+  notes         String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String
+  recipient     CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+}
+
+model Medication {
+  id              String    @id @default(cuid())
+  name            String
+  dosage          String
+  frequency       String
+  times           String?   // JSON array of times
+  startDate       DateTime?
+  endDate         DateTime?
+  instructions    String?
+  prescribingDoc  String?
+  active          Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId     String
+  recipient       CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  logs            MedicationLog[]
+  
+  @@index([userId])
+}
+
+model MedicationLog {
+  id            String    @id @default(cuid())
+  medicationId  String
+  medication    Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  
+  takenAt       DateTime
+  scheduledTime String?
+  notes         String?
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([medicationId])
+  @@index([takenAt])
+}
+
+model SymptomLog {
+  id            String    @id @default(cuid())
+  date          DateTime  @default(now())
+  symptoms      String    // JSON string of symptoms and severity
+  notes         String?
+  mood          Int?      // 1-5 scale
+  painLevel     Int?      // 0-10 scale
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String
+  recipient     CareRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+}
+
+// ============================================
+// COMMUNITY
+// ============================================
+
+model CommunityPost {
+  id            String    @id @default(cuid())
+  title         String
+  content       String    @db.Text
+  category      String    @default("general")
+  likes         Int       @default(0)
+  views         Int       @default(0)
+  isAnonymous   Boolean   @default(false)
+  isPinned      Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments      CommunityComment[]
+  likesUsers    PostLike[]
+  
+  @@index([authorId])
+  @@index([category])
+}
+
+model CommunityComment {
+  id            String    @id @default(cuid())
+  content       String    @db.Text
+  isAnonymous   Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  postId        String
+  post          CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  @@index([postId])
+}
+
+model PostLike {
+  id            String    @id @default(cuid())
+  postId        String
+  post          CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@unique([postId, userId])
+}
+
+// ============================================
+// AI ASSISTANT
+// ============================================
+
+model ChatMessage {
+  id            String    @id @default(cuid())
+  role          String    // user, assistant
+  content       String    @db.Text
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// WELLNESS TRACKING
+// ============================================
+
+model WellnessLog {
+  id                String    @id @default(cuid())
+  date              DateTime  @default(now())
+  stressLevel       Int?      // 1-10 scale
+  sleepHours        Float?
+  sleepQuality      Int?      // 1-5 scale
+  mood              Int?      // 1-5 scale
+  physicalActivity  Boolean   @default(false)
+  selfCareTime      Int?      // minutes
+  notes             String?
+  burnoutRisk       Int?      // 0-100 calculated score
+  
+  createdAt         DateTime  @default(now())
+  
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+}
+
+// ============================================
+// TASKS
+// ============================================
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  dueDate       DateTime?
+  completed     Boolean   @default(false)
+  priority      String    @default("medium") // low, medium, high, urgent
+  category      String    @default("care") // care, personal, medical, other
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientId   String?
+  recipient     CareRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([dueDate])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id            String    @id @default(cuid())
+  title         String
+  message       String
+  type          String    // reminder, success, social, tip, alert
+  read          Boolean   @default(false)
+  actionUrl     String?
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([read])
+}
+
+// ============================================
+// TESTIMONIALS
+// ============================================
+
+model Testimonial {
+  id              String    @id @default(cuid())
+  
+  // User info
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName        String
+  userAvatar      String?
+  userLocation    String    // Country/City
+  userCountry     String?   // ISO country code
+  
+  // Testimonial content
+  relationshipType String   // "Père", "Mère", "Conjoint", "Enfant"...
+  careDuration    String    // "2 ans", "6 mois"...
+  rating          Int       // 1-5 stars
+  title           String
+  content         String    @db.Text
+  photoUrl        String?
+  
+  // Privacy
+  isAnonymous     Boolean   @default(false)
+  showLocation    Boolean   @default(true)
+  
+  // Moderation
+  status          String    @default("pending") // pending, approved, rejected
+  featured        Boolean   @default(false)
+  rejectionReason String?
+  
+  // Engagement
+  helpful         Int       @default(0) // Number of "helpful" votes
+  
+  // Metadata
+  language        String    @default("fr")
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  approvedAt      DateTime?
+  approvedBy      String?   // Admin user ID
+  
+  @@index([status])
+  @@index([featured])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+// ============================================
+// PAYMENTS
+// ============================================
+
+model Payment {
+  id              String    @id @default(cuid())
+  
+  // User
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Amount
+  amount          Float
+  currency        String    // EUR, XOF, KES, NGN...
+  amountInUSD     Float?    // For reporting
+  
+  // Plan
+  planId          String    // free, premium, family
+  billingCycle    String    // monthly, yearly
+  
+  // Provider
+  provider        String    // flutterwave, paystack, stripe
+  providerRef     String?   @unique // Transaction reference
+  providerTxId    String?   // Provider transaction ID
+  
+  // Status
+  status          String    @default("pending") // pending, completed, failed, refunded, canceled
+  
+  // Payment method
+  paymentMethod   String?   // card, mobile_money, bank_transfer, apple_pay, google_pay
+  paymentDetails  String?   // JSON with additional details (phone number for mobile money, etc.)
+  
+  // Metadata
+  metadata        String?   // JSON for additional data
+  errorMessage    String?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([provider])
+  @@index([createdAt])
+}
+
+// ============================================
+// SUBSCRIPTION PLANS (Static data, could be in code)
+// ============================================
+
+model SubscriptionPlan {
+  id              String    @id @default(cuid())
+  planId          String    @unique // free, premium, family
+  
+  name            String
+  description     String?
+  
+  // Pricing by currency (JSON)
+  pricing         String    // JSON: { "EUR": 9.99, "XOF": 6500, "KES": 1200, "NGN": 4500 }
+  
+  // Features (JSON array)
+  features        String    // JSON array of feature strings
+  
+  // Limits
+  maxRecipients   Int       @default(1)
+  maxAiMessages   Int       @default(10)
+  maxFamilyMembers Int      @default(1)
+  
+  // Trial
+  trialDays       Int       @default(0)
+  
+  // Status
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfig {
+  id            String    @id @default(cuid())
+  key           String    @unique
+  value         String    @db.Text
+  description   String?
+  
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============================================
+// AUDIT LOG (for security and compliance)
+// ============================================
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  
+  // Who
+  userId        String?
+  userAgent     String?
+  ipAddress     String?
+  
+  // What
+  action        String    // login, logout, payment, profile_update, etc.
+  entity        String?   // user, payment, testimonial, etc.
+  entityId      String?
+  
+  // Details
+  details       String?   // JSON with action details
+  status        String    // success, failure
+  
+  // When
+  createdAt     DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

@@ -1,0 +1,15 @@
+-- CareCircle — Migration initiale
+-- À exécuter sur Neon via: npx prisma db push
+-- ou via le dashboard Neon SQL Editor
+
+-- Cette migration est gérée automatiquement par Prisma.
+-- Utilisez les commandes suivantes selon votre flux:
+--
+-- Développement local:
+--   npx prisma migrate dev --name init
+--
+-- Production (Neon / Vercel):
+--   npx prisma db push
+--   ou: npx prisma migrate deploy
+--
+-- Le schéma complet est dans prisma/schema.prisma
